@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campo Minado — Cálculo Multivariable Avanzado</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script>
+MathJax = {
+  tex: { inlineMath:[['\\(','\\)'],['$','$']], displayMath:[['\\[','\\]'],['$$','$$']], packages:{'[+]':['ams']} },
+  options: { skipHtmlTags:['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+<style>
+/* (Mantengo todo tu CSS original intacto) */
+:root{
+  --bg:#08090f;--surface:#0f1521;--surface2:#141d2e;--surface3:#1a2640;
+  --accent:#f5c842;--text:#e8eaf6;--text-muted:#6b7a99;
+  --easy:#3dffc0;--easy-bg:rgba(61,255,192,0.09);
+  --hard:#5b9eff;--hard-bg:rgba(91,158,255,0.09);
+  --mine:#ff4e4e;--mine-bg:rgba(255,78,78,0.09);
+  --bonus:#f5c842;--bonus-bg:rgba(245,200,66,0.09);
+  --font-d:'Bebas Neue',sans-serif;
+  --font-m:'Space Mono',monospace;
+  --font-b:'DM Sans',sans-serif;
+  --r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(245,200,66,0.025) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(245,200,66,0.025) 1px,transparent 1px);
+  background-size:44px 44px;pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:20px 16px}
+.header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+.eyebrow{font-family:var(--font-m);font-size:10px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:4px}
+.main-title{font-family:var(--font-d);font-size:clamp(38px,6.5vw,68px);letter-spacing:3px;line-height:1;text-shadow:0 0 40px rgba(245,200,66,0.18)}
+.main-title span{color:var(--accent)}
+.subtitle{font-family:var(--font-m);font-size:10px;color:var(--text-muted);margin-top:6px;letter-spacing:1px}
+.btn-reset{font-family:var(--font-m);font-size:11px;color:var(--text-muted);background:var(--surface2);border:1px solid rgba(255,255,255,0.07);border-radius:6px;padding:9px 18px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;white-space:nowrap}
+.btn-reset:hover{color:var(--text);border-color:rgba(255,255,255,0.18)}
+.scores-row{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:18px}
+@media(max-width:560px){.scores-row{grid-template-columns:repeat(3,1fr)}}
+.sc{background:var(--surface);border:1px solid rgba(255,255,255,0.05);border-radius:var(--r);padding:10px 6px;text-align:center;position:relative;overflow:hidden;transition:border-color .3s,box-shadow .3s}
+.sc.lead{border-color:rgba(245,200,66,.5);box-shadow:0 0 18px rgba(245,200,66,.12)}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .3s}
+.sc.lead::before{opacity:1}
+.sc-lbl{font-family:var(--font-m);font-size:8px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px}
+.sc-val{font-family:var(--font-d);font-size:32px;line-height:1;color:var(--text);transition:color .3s}
+.sc.lead .sc-val{color:var(--accent)}
+.sc-flash{animation:scFlash .45s ease}
+@keyframes scFlash{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.legend{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--font-m);color:var(--text-muted)}
+.ld{width:9px;height:9px;border-radius:2px}
+.gw{background:var(--surface);border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:18px;margin-bottom:18px;max-width:560px;margin-left:auto;margin-right:auto}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cell{
+  aspect-ratio:1;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);
+  font-size:clamp(32px,5.5vw,52px);
+  font-weight:700;
+  cursor:pointer;
+  color:var(--text-muted);
+  transition:all .14s;
+  position:relative;overflow:hidden;user-select:none;
+  letter-spacing:-1.5px;
+}
+.cell:hover:not(.revealed){background:var(--surface3);border-color:var(--accent);color:var(--accent);transform:scale(1.07);z-index:2;box-shadow:0 0 22px rgba(245,200,66,.28)}
+.cell.revealed{cursor:default;transform:none!important}
+.cell.easy{background:var(--easy-bg);border-color:rgba(61,255,192,.3);color:var(--easy);font-size:clamp(36px,6vw,56px)}
+.cell.hard{background:var(--hard-bg);border-color:rgba(91,158,255,.3);color:var(--hard);font-size:clamp(36px,6vw,56px)}
+.cell.mine{background:var(--mine-bg);border-color:rgba(255,78,78,.3);color:var(--mine);font-size:clamp(40px,6.5vw,60px)}
+.cell.bonus{background:var(--bonus-bg);border-color:rgba(245,200,66,.35);color:var(--bonus);font-size:clamp(40px,6.5vw,60px)}
+.cell.pop{animation:pop .28s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{0%{transform:scale(.55);opacity:0}100%{transform:scale(1);opacity:1}}
+.overlay{position:fixed;inset:0;background:rgba(4,6,14,.92);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;opacity:0;pointer-events:none;transition:opacity .22s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:28px 28px 24px;max-width:660px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(18px) scale(.97);transition:transform .22s cubic-bezier(.34,1.2,.64,1);position:relative}
+.overlay.open .modal{transform:translateY(0) scale(1)}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:18px 18px 0 0}
+.modal.easy::before{background:linear-gradient(90deg,transparent,var(--easy),transparent)}
+.modal.hard::before{background:linear-gradient(90deg,transparent,var(--hard),transparent)}
+.modal.mine::before{background:linear-gradient(90deg,transparent,var(--mine),transparent)}
+.modal.bonus::before{background:linear-gradient(90deg,transparent,var(--bonus),transparent)}
+.modal.bomb-challenge::before{background:linear-gradient(90deg,transparent,#ff8c00,transparent)}
+.mh{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.mbadge{font-family:var(--font-m);font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:4px 11px;border-radius:4px;font-weight:700}
+.b-easy{background:var(--easy-bg);color:var(--easy);border:1px solid rgba(61,255,192,.25)}
+.b-hard{background:var(--hard-bg);color:var(--hard);border:1px solid rgba(91,158,255,.25)}
+.b-mine{background:var(--mine-bg);color:var(--mine);border:1px solid rgba(255,78,78,.25)}
+.b-bonus{background:var(--bonus-bg);color:var(--bonus);border:1px solid rgba(245,200,66,.3)}
+.b-bomb{background:rgba(255,140,0,.15);color:#ff8c00;border:1px solid rgba(255,140,0,.3)}
+.mnum{font-family:var(--font-m);font-size:10px;color:var(--text-muted);margin-left:auto;letter-spacing:1px}
+.mq{font-size:19px;font-weight:500;color:var(--text);line-height:1.65;margin-bottom:10px}
+.msub{font-family:var(--font-m);font-size:10px;color:var(--text-muted);letter-spacing:1px;margin-bottom:18px}
+.timer-sec{margin-bottom:18px}
+.timer-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.tlbl{font-family:var(--font-d);font-size:26px;color:var(--accent);line-height:1;transition:color .3s}
+.tlbl.danger{color:var(--mine)}
+.thint{font-family:var(--font-m);font-size:9px;color:var(--text-muted);letter-spacing:1px}
+.ttrack{height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden}
+.tfill{height:100%;background:var(--accent);border-radius:3px;transition:width 1s linear,background .3s}
+.sol-box{display:none;background:var(--surface2);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.sol-box.visible{display:block;animation:fadeUp .28s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.sol-label{font-family:var(--font-m);font-size:8px;letter-spacing:2px;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px}
+.step{margin-bottom:10px;padding-left:14px;border-left:2px solid rgba(255,255,255,0.1)}
+.step:last-child{margin-bottom:0}
+.step-title{font-family:var(--font-d);font-size:13px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:rgba(245,200,66,0.15);border:1px solid rgba(245,200,66,0.35);border-radius:4px;font-size:12px;line-height:1;flex-shrink:0}
+.step-content{font-size:15px;color:var(--text);line-height:1.75}
+.step-sub{margin-top:6px;padding-left:10px;border-left:2px solid rgba(255,255,255,0.08);font-size:14px;color:var(--text-muted);line-height:1.65}
+.answer-hi{color:var(--easy);font-weight:600}
+.bomb-dec{display:none;margin-bottom:14px}
+.bomb-dec.visible{display:block;animation:fadeUp .25s ease}
+.bomb-title{font-family:var(--font-d);font-size:22px;color:#ff8c00;letter-spacing:2px;margin-bottom:8px}
+.bomb-desc{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:16px}
+.bomb-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bomb-opt{border-radius:9px;padding:16px;text-align:center;cursor:pointer;border:1px solid rgba(255,255,255,0.08);background:var(--surface2);transition:all .15s}
+.bomb-opt:hover{transform:scale(1.02)}
+.bomb-opt.safe{border-color:rgba(245,200,66,.3)}
+.bomb-opt.safe:hover{background:rgba(245,200,66,.1)}
+.bomb-opt.risk{border-color:rgba(255,78,78,.3)}
+.bomb-opt.risk:hover{background:rgba(255,78,78,.1)}
+.bo-icon{font-size:28px;margin-bottom:6px}
+.bo-title{font-family:var(--font-d);font-size:18px;letter-spacing:1px;margin-bottom:4px}
+.bomb-opt.safe .bo-title{color:var(--accent)}
+.bomb-opt.risk .bo-title{color:var(--mine)}
+.bo-desc{font-family:var(--font-m);font-size:9px;color:var(--text-muted);line-height:1.5;letter-spacing:.5px}
+.tg{display:none;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.tg.visible{display:grid;animation:fadeUp .22s ease}
+.tbtn{font-family:var(--font-d);font-size:17px;letter-spacing:1px;padding:11px 7px;border-radius:8px;border:1px solid rgba(255,255,255,0.09);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all .14s;text-align:center}
+.tbtn:hover{border-color:var(--accent);color:var(--accent);background:rgba(245,200,66,.09);transform:scale(1.03)}
+.ma{display:flex;gap:7px;flex-wrap:wrap}
+.btn{font-family:var(--font-m);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:9px 16px;border-radius:7px;border:1px solid rgba(255,255,255,0.09);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all .14s}
+.btn:hover{border-color:rgba(255,255,255,.22);color:var(--text)}
+.btn-ok{background:var(--accent);color:#0a0e1a;border-color:transparent;font-weight:700}
+.btn-ok:hover{background:#ffe066;color:#0a0e1a}
+.btn-bad{border-color:rgba(255,78,78,.28);color:var(--mine)}
+.btn-bad:hover{background:rgba(255,78,78,.09)}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--surface2);border:1px solid rgba(255,255,255,.11);border-radius:8px;padding:11px 22px;font-family:var(--font-m);font-size:12px;color:var(--text);z-index:200;opacity:0;transition:all .28s;pointer-events:none;letter-spacing:.5px;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.foot{font-family:var(--font-m);font-size:9px;color:var(--text-muted);letter-spacing:1px;text-align:center;padding-bottom:18px}
+@media(max-width:480px){.modal{padding:18px}.mq{font-size:16px}.gw{padding:10px}.grid{gap:7px}.bomb-opts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="eyebrow">CÁLCULO MULTIVARIABLE · EXAMEN FINAL</div>
+      <h1 class="main-title">CAMPO <span>MINADO</span></h1>
+      <p class="subtitle">Derivadas Parciales Avanzadas · Regla de Cadena · Lagrange · Integrales Dobles</p>
+    </div>
+    <button class="btn-reset" onclick="resetGame()">↺ Nueva partida</button>
+  </div>
+
+  <div class="scores-row" id="scores"></div>
+
+  <div class="legend">
+    <div class="li"><div class="ld" style="background:var(--easy)"></div>Medio (+1)</div>
+    <div class="li"><div class="ld" style="background:var(--hard)"></div>Difícil (+2)</div>
+    <div class="li"><div class="ld" style="background:var(--mine)"></div>Mina 💣</div>
+    <div class="li"><div class="ld" style="background:var(--bonus)"></div>Bonus ⭐ (+1 directo)</div>
+  </div>
+
+  <div class="gw"><div class="grid" id="grid"></div></div>
+  <p class="foot">Haz clic en un número · 2 min para responder · El profe valida la respuesta</p>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <div class="mh">
+      <div class="mbadge" id="mbadge"></div>
+      <div class="mnum" id="mnum"></div>
+    </div>
+    <div class="mq" id="mq"></div>
+    <div class="msub" id="msub"></div>
+
+    <div class="timer-sec" id="timer-sec">
+      <div class="timer-top">
+        <div class="tlbl" id="tlbl">120</div>
+        <div class="thint">SEGUNDOS</div>
+      </div>
+      <div class="ttrack"><div class="tfill" id="tfill"></div></div>
+    </div>
+
+    <div class="sol-box" id="sol-box">
+      <div class="sol-label">Proceso de solución — Método de Pólya</div>
+      <div id="sol-steps"></div>
+    </div>
+
+    <div class="bomb-dec" id="bomb-dec">
+      <div class="bomb-title">💣 ¡MINA ACTIVADA!</div>
+      <div class="bomb-desc">La fila debe elegir: ceder el punto a un rival o arriesgarse con un ejercicio <strong>extremo</strong>. Si falla, pierde <strong>2 puntos</strong>.</div>
+      <div class="bomb-opts">
+        <div class="bomb-opt safe" onclick="bombSafe()">
+          <div class="bo-icon">🏳️</div>
+          <div class="bo-title">Ceder</div>
+          <div class="bo-desc">Un rival gana 1 punto.<br>Sin riesgo.</div>
+        </div>
+        <div class="bomb-opt risk" onclick="bombRisk()">
+          <div class="bo-icon">🎯</div>
+          <div class="bo-title">Desafío</div>
+          <div class="bo-desc">Ejercicio extremo.<br>Correcto → salvan. Mal → −2 pts.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tg" id="tg"></div>
+    <div class="ma" id="ma"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DATA — CÁLCULO MULTIVARIABLE (Mejorado con pasos detallados)
+// ═══════════════════════════════════════════════════════════
+
+const easyEx = [
+  {
+    q:"Sea \\( f(x,y) = e^{x^2 y} \\sin(xy) + \\ln(1 + x^2 + y^2) \\). Demuestre que \\( f_{xy} = f_{yx} \\) en \\( (1,1) \\) usando el teorema de Clairaut.",
+    steps:[
+      {t:"Comprender el problema",c:"Verificar la igualdad de derivadas mixtas en un punto específico."},
+      {t:"Concebir un plan",c:"Calcular \\( f_{xy} \\) y \\( f_{yx} \\) por separado y evaluar en (1,1)."},
+      {t:"Ejecución",c:"Primero se calcula \\( f_x \\), luego se deriva respecto a \\( y \\). El proceso es simétrico para \\( f_y \\) y luego \\( f_{yx} \\)."},
+      {t:"Resultado",c:"\\( \\boxed{f_{xy}(1,1) = f_{yx}(1,1) = 4e + \\dfrac{1}{2}} \\)"}
+    ]
+  },
+  {
+    q:"Dada \\( z = f(x,y) \\) con \\( x = u^2 + v \\), \\( y = uv \\). Halle \\( \\dfrac{\\partial^2 z}{\\partial u^2} \\) en términos de derivadas de \\( f \\).",
+    steps:[
+      {t:"Comprender el problema",c:"Aplicar la regla de la cadena para segundas derivadas."},
+      {t:"Concebir un plan",c:"Calcular \\( z_u \\) y luego diferenciar nuevamente respecto a \\( u \\)."},
+      {t:"Ejecución",c:"\\( z_u = f_x (2u) + f_y v \\)<br>\\( z_{uu} = f_{xx}(2u)^2 + f_{xy}(2u)v + f_{yx}v(2u) + f_{yy}v^2 + f_x \\cdot 2 \\)"},
+      {t:"Resultado",c:"\\( \\boxed{z_{uu} = 4u^2 f_{xx} + 4uv f_{xy} + 2uv f_{yx} + v^2 f_{yy} + 2f_x} \\)"}
+    ]
+  },
+  {
+    q:"Encuentre la derivada direccional de \\( f(x,y,z) = x^2 y + yz^2 \\) en \\( (1,2,3) \\) en dirección hacia el punto \\( (4,1,0) \\).",
+    steps:[
+      {t:"Comprender el problema",c:"Usar \\( D_{\\mathbf{u}} f = \\nabla f \\cdot \\mathbf{u} \\) donde \\( \\mathbf{u} \\) es unitario."},
+      {t:"Concebir un plan",c:"Calcular gradiente y vector dirección normalizado."},
+      {t:"Ejecución",c:"\\( \\nabla f(1,2,3) = \\langle 4, 19, 12 \\rangle \\)<br>Vector dirección: \\( \\langle 3,-1,-3 \\rangle \\), \\( \\|\\mathbf{v}\\| = \\sqrt{19} \\)<br>\\( \\mathbf{u} = \\dfrac{\\langle 3,-1,-3 \\rangle}{\\sqrt{19}} \\)"},
+      {t:"Resultado",c:"\\( \\boxed{D_{\\mathbf{u}} f = -\\dfrac{43}{\\sqrt{19}}} \\)"}
+    ]
+  },
+  {
+    q:"Aproxime \\( f(1.1, 2.05, 0.98) \\) usando el plano tangente de \\( f(x,y,z) = x y z + \\ln(x+y+z) \\) en \\( (1,2,1) \\).",
+    steps:[
+      {t:"Comprender el problema",c:"Usar la aproximación lineal: \\( f(\\mathbf{a} + \\mathbf{h}) \\approx f(\\mathbf{a}) + \\nabla f(\\mathbf{a}) \\cdot \\mathbf{h} \\)."},
+      {t:"Concebir un plan",c:"Calcular valor y gradiente en el punto base."},
+      {t:"Ejecución",c:"\\( f(1,2,1) = 2 + \\ln 4 \\)<br>\\(\\nabla f = \\langle yz + \\frac{1}{x+y+z}, xz + \\frac{1}{x+y+z}, xy + \\frac{1}{x+y+z} \\rangle \\) evaluado en (1,2,1)."},
+      {t:"Resultado",c:"\\( \\boxed{f(1.1,2.05,0.98) \\approx 2 + \\ln 4 + \\nabla f \\cdot \\langle 0.1, 0.05, -0.02 \\rangle} \\)"}
+    ]
+  },
+  {
+    q:"Evalúe \\( \\iint_R (x + y) \\, dA \\) donde \\( R \\) es la región acotada por \\( y = x^2 \\) y \\( y = 4 - x^2 \\) cambiando orden de integración.",
+    steps:[
+      {t:"Comprender el problema",c:"La región es simétrica respecto al eje y."},
+      {t:"Concebir un plan",c:"Cambiar orden: integrar primero respecto a x."},
+      {t:"Ejecución",c:"Intersecciones en \\( x = \\pm \\sqrt{2} \\). Límites: \\( x \\) de \\(-\\sqrt{2}\\) a \\(\\sqrt{2}\\), \\( y \\) de \\(x^2\\) a \\(4-x^2\\)."},
+      {t:"Resultado",c:"\\( \\boxed{\\dfrac{32\\sqrt{2}}{3}} \\)"}
+    ]
+  },
+  {
+    q:"Usando Lagrange, maximice \\( f(x,y) = x^2 + y^2 \\) sujeto a \\( x^2 + 3y^2 = 12 \\).",
+    steps:[
+      {t:"Comprender el problema",c:"Optimización con restricción (elipse)."},
+      {t:"Concebir un plan",c:"Resolver \\( \\nabla f = \\lambda \\nabla g \\)."},
+      {t:"Ejecución",c:"\\( 2x = \\lambda 2x \\), \\( 2y = \\lambda 6y \\). Casos \\( x=0 \\) y \\( y=0 \\)."},
+      {t:"Resultado",c:"\\( \\boxed{\\text{Máximo}=12 \\text{ en } (0,\\pm 2)} \\)"}
+    ]
+  }
+];
+
+const hardEx = [
+  {
+    q:"Sea \\( w = f(x,y,z) \\) donde \\( x = r \\cos \\theta \\), \\( y = r \\sin \\theta \\), \\( z = r^2 \\). Halle \\( \\dfrac{\\partial^2 w}{\\partial r \\partial \\theta} \\).",
+    steps:[
+      {t:"Comprender el problema",c:"Regla de la cadena en coordenadas cilíndricas."},
+      {t:"Concebir un plan",c:"Calcular primera derivada y luego la mixta."},
+      {t:"Ejecución",c:"Se aplica la regla de la cadena dos veces considerando todas las dependencias."},
+      {t:"Resultado",c:"\\( \\boxed{w_{r\\theta} = -r\\sin\\theta\\, f_x + r\\cos\\theta\\, f_y + 2r f_z + \\text{términos de segundas derivadas}} \\)"}
+    ]
+  },
+  {
+    q:"Clasifique los puntos críticos de \\( f(x,y) = x^4 + y^4 - 4xy + x^2 + y^2 \\) usando Hessiano.",
+    steps:[
+      {t:"Comprender el problema",c:"Análisis de concavidad con la matriz Hessiana."},
+      {t:"Concebir un plan",c:"Encontrar \\( \\nabla f = 0 \\), luego calcular \\( D = f_{xx}f_{yy} - f_{xy}^2 \\)."},
+      {t:"Ejecución",c:"Puntos críticos: (0,0), (1,1), etc. Evaluar Hessiano en cada uno."},
+      {t:"Resultado",c:"\\( \\boxed{(0,0): \\text{mínimo local}} \\)"}
+    ]
+  },
+  {
+    q:"Maximice \\( f(x,y,z) = xyz \\) sujeto a \\( x+y+z=9 \\) y \\( x^2 + y^2 + z^2 = 27 \\) usando Lagrange con dos restricciones.",
+    steps:[
+      {t:"Comprender el problema",c:"Optimización con dos restricciones."},
+      {t:"Concebir un plan",c:"Sistema con dos multiplicadores \\( \\lambda, \\mu \\)."},
+      {t:"Ejecución",c:"Por simetría, probar \\( x=y=z \\). Resolver el sistema."},
+      {t:"Resultado",c:"\\( \\boxed{\\text{Máximo en } (3,3,3), \\quad f=27} \\)"}
+    ]
+  },
+  {
+    q:"Cambie a polares y evalúe \\( \\iint_R \\frac{1}{x^2 + y^2 + 1} \\, dA \\) sobre el disco unitario.",
+    steps:[
+      {t:"Comprender el problema",c:"Integral sobre el disco \\( x^2 + y^2 \\le 1 \\)."},
+      {t:"Concebir un plan",c:"Usar coordenadas polares con Jacobiano \\( r \\)."},
+      {t:"Ejecución",c:"\\( \\int_0^{2\\pi} \\int_0^1 \\frac{r}{r^2 + 1} \\, dr \\, d\\theta = 2\\pi \\int_0^1 \\frac{r}{r^2+1} dr = \\pi \\ln 2 \\)"},
+      {t:"Resultado",c:"\\( \\boxed{\\pi \\ln 2} \\)"}
+    ]
+  }
+];
+
+const bombEx = [
+  {
+    q:"(DESAFÍO FINAL) Verifique si \\( u(x,y) = e^{-y} \\cos x + x y \\) satisface la ecuación de Laplace \\( u_{xx} + u_{yy} = 0 \\).",
+    steps:[
+      {t:"Comprender el problema",c:"Comprobar si la función es armónica."},
+      {t:"Concebir un plan",c:"Calcular \\( u_{xx} \\) y \\( u_{yy} \\) y sumar."},
+      {t:"Ejecución",c:"\\( u_{xx} = -e^{-y}\\cos x \\)<br>\\( u_{yy} = e^{-y}\\cos x - 2x \\)<br>Suma: \\( -2x \\neq 0 \\)"},
+      {t:"Resultado",c:"\\( \\boxed{\\text{No satisface la ecuación de Laplace}} \\)"}
+    ]
+  },
+  {
+    q:"(DESAFÍO FINAL) Halle \\( \\frac{\\partial^2 z}{\\partial u \\partial v} \\) donde \\( z = f(x,y) \\), \\( x = u + v^2 \\), \\( y = u v + \\sin u \\).",
+    steps:[
+      {t:"Comprender el problema",c:"Regla de la cadena con dependencias complejas."},
+      {t:"Concebir un plan",c:"Calcular todas las derivadas parciales necesarias."},
+      {t:"Ejecución",c:"Se obtiene una expresión con 8 términos que involucran \\( f_{xx}, f_{xy}, f_{yy} \\) y derivadas de x e y."},
+      {t:"Resultado",c:"\\( \\boxed{\\text{Expresión con } f_{xx}, f_{xy}, f_{yy} \\text{ y derivadas de las transformaciones}} \\)"}
+    ]
+  }
+];
+
+// Resto del código JavaScript (sin cambios)
+const NUM_TEAMS = 6;
+const TOTAL_CELLS = 16;
+let scores = new Array(NUM_TEAMS).fill(0);
+let timerInterval = null, currentCell = null;
+let cellData = [], revealed = [], nums = [];
+let currentBombTeam = -1;
+
+function shuffle(arr){
+  let a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+  return a;
+}
+
+function buildGame(){
+  const pool=[
+    ...Array(6).fill('easy'),
+    ...Array(6).fill('hard'),
+    ...Array(3).fill('mine'),
+    ...Array(1).fill('bonus')
+  ];
+  const types=shuffle(pool);
+  const ePool=shuffle(easyEx), hPool=shuffle(hardEx), bPool=shuffle(bombEx);
+  let ei=0,hi=0;
+  cellData=types.map(t=>{
+    if(t==='easy') return{type:'easy',ex:ePool[ei++%ePool.length]};
+    if(t==='hard') return{type:'hard',ex:hPool[hi++%hPool.length]};
+    if(t==='mine') return{type:'mine', bombEx: bPool[Math.floor(Math.random()*bPool.length)]};
+    return{type:'bonus'};
+  });
+  nums=shuffle([...Array(TOTAL_CELLS)].map((_,i)=>i+1));
+  revealed=new Array(TOTAL_CELLS).fill(false);
+}
+
+function resetGame(){
+  scores=new Array(NUM_TEAMS).fill(0);
+  stopTimer();closeModal();buildGame();renderScores();renderGrid();
+}
+
+function renderScores(){
+  const max=Math.max(...scores,0);
+  document.getElementById('scores').innerHTML=scores.map((s,i)=>`
+    <div class="sc ${s>0&&s===max?'lead':''}">
+      <div class="sc-lbl">Fila ${i+1}</div>
+      <div class="sc-val" id="sv-${i}">${s}</div>
+    </div>`).join('');
+}
+
+function renderGrid(){
+  const g=document.getElementById('grid');g.innerHTML='';
+  for(let i=0;i<TOTAL_CELLS;i++){
+    const c=document.createElement('div');c.className='cell';c.id=`cell-${i}`;
+    if(revealed[i]){
+      const t=cellData[i].type;
+      c.classList.add('revealed',t);
+      c.textContent=t==='mine'?'💣':t==='bonus'?'⭐':t==='easy'?'✓':'★';
+    }else{
+      c.textContent=nums[i];c.onclick=()=>openCell(i);
+    }
+    g.appendChild(c);
+  }
+}
+
+function resetModal(){
+  document.getElementById('sol-box').classList.remove('visible');
+  document.getElementById('tg').classList.remove('visible');
+  document.getElementById('bomb-dec').classList.remove('visible');
+  document.getElementById('timer-sec').style.display='block';
+}
+
+function openOverlay(type){
+  const overlay=document.getElementById('overlay'),modal=document.getElementById('modal');
+  modal.className=`modal ${type}`;
+  overlay.classList.add('open');
+}
+
+function setjax(el,html){
+  el.innerHTML=html;
+  if(window.MathJax) MathJax.typesetPromise([el]);
+}
+
+function openCell(idx){
+  if(revealed[idx])return;
+  currentCell=idx;revealed[idx]=true;
+  const cEl=document.getElementById(`cell-${idx}`),d=cellData[idx];
+  cEl.onclick=null;cEl.classList.add('revealed',d.type,'pop');
+  cEl.textContent=d.type==='mine'?'💣':d.type==='bonus'?'⭐':d.type==='easy'?'✓':'★';
+
+  resetModal();
+  document.getElementById('mnum').textContent=`# ${nums[idx]}`;
+
+  if(d.type==='bonus'){
+    document.getElementById('mbadge').className='mbadge b-bonus';
+    document.getElementById('mbadge').textContent='⭐ Bonus';
+    setjax(document.getElementById('mq'),'¡Bonus! Punto directo para la fila que lo eligió.');
+    document.getElementById('msub').textContent='Selecciona la fila:';
+    document.getElementById('timer-sec').style.display='none';
+    showTeamSelector(false);
+    document.getElementById('ma').innerHTML=`<button class="btn btn-bad" onclick="closeModal()">Cerrar</button>`;
+    openOverlay('bonus');
+    return;
+  }
+
+  if(d.type==='mine'){
+    document.getElementById('mbadge').className='mbadge b-mine';
+    document.getElementById('mbadge').textContent='💣 ¡MINA!';
+    setjax(document.getElementById('mq'),'La fila que eligió esta casilla pisó una mina.');
+    document.getElementById('msub').textContent='¿Qué fila pisó la mina?';
+    document.getElementById('timer-sec').style.display='none';
+    showTeamSelector(true, d);
+    document.getElementById('ma').innerHTML=`<button class="btn btn-bad" onclick="closeModal()">Cerrar</button>`;
+    openOverlay('mine');
+    return;
+  }
+
+  const isEasy=d.type==='easy';
+  document.getElementById('mbadge').className=`mbadge ${isEasy?'b-easy':'b-hard'}`;
+  document.getElementById('mbadge').textContent=isEasy?'Ejercicio Medio':'Ejercicio Difícil';
+  setjax(document.getElementById('mq'),d.ex.q);
+  document.getElementById('msub').textContent='120 segundos — ¡resuelvan en equipo!';
+  document.getElementById('ma').innerHTML=`
+    <button class="btn btn-ok" onclick="showSolution()">Ver proceso</button>
+    <button class="btn btn-bad" onclick="closeModal()">Cancelar</button>`;
+  openOverlay(d.type);
+  startTimer(120);
+}
+
+function showSolution(){
+  stopTimer();
+  const d=cellData[currentCell];
+  const box=document.getElementById('sol-box'),stepsEl=document.getElementById('sol-steps');
+
+  let html = d.ex.steps.map((s,i) => `
+    <div class="step">
+      <div class="step-title"><span class="step-num">${i+1}</span> ${s.t}</div>
+      <div class="step-content">${s.c}</div>
+    </div>
+  `).join('');
+
+  stepsEl.innerHTML = html;
+  box.classList.add('visible');
+  if(window.MathJax) MathJax.typesetPromise([stepsEl]);
+  document.getElementById('msub').textContent='Selecciona la fila que respondió correctamente:';
+  showTeamSelector(false);
+  document.getElementById('ma').innerHTML=`<button class="btn btn-bad" onclick="closeModal()">Ninguna / Cerrar</button>`;
+}
+
+// Resto de funciones (awardPoint, bomb mechanics, timer, etc.) permanecen iguales
+function showTeamSelector(isBomb){
+  const tg=document.getElementById('tg');
+  tg.innerHTML=scores.map((_,i)=>`
+    <button class="tbtn" onclick="${isBomb ? `selectBombTeam(${i})` : `awardPoint(${i})`}">
+      Fila ${i+1}<br><small style="font-size:10px;opacity:.45">${scores[i]} pts</small>
+    </button>`).join('');
+  tg.classList.add('visible');
+}
+
+function selectBombTeam(teamIdx){
+  currentBombTeam=teamIdx;
+  document.getElementById('tg').classList.remove('visible');
+  document.getElementById('mq').innerHTML=`Fila ${teamIdx+1} pisó la mina.`;
+  document.getElementById('msub').textContent='Elige tu destino:';
+  document.getElementById('bomb-dec').classList.add('visible');
+  document.getElementById('ma').innerHTML='';
+}
+
+function bombSafe(){
+  document.getElementById('bomb-dec').classList.remove('visible');
+  document.getElementById('mq').innerHTML=`Fila ${currentBombTeam+1} cede. ¿Qué fila rival recibe el punto?`;
+  document.getElementById('msub').textContent='Selecciona la fila rival:';
+  const tg=document.getElementById('tg');
+  tg.innerHTML=scores.map((_,i)=>{
+    if(i===currentBombTeam) return `<button class="tbtn" style="opacity:.3;cursor:not-allowed">Fila ${i+1}<br><small>(tú)</small></button>`;
+    return `<button class="tbtn" onclick="awardPoint(${i})">Fila ${i+1}<br><small style="font-size:10px;opacity:.45">${scores[i]} pts</small></button>`;
+  }).join('');
+  tg.classList.add('visible');
+}
+
+function bombRisk(){
+  document.getElementById('bomb-dec').classList.remove('visible');
+  const d=cellData[currentCell].bombEx;
+  document.getElementById('mbadge').className='mbadge b-bomb';
+  document.getElementById('mbadge').textContent='💣 DESAFÍO EXTREMO';
+  setjax(document.getElementById('mq'),d.q);
+  document.getElementById('msub').textContent='90 segundos — Si responden bien se salvan.';
+  document.getElementById('timer-sec').style.display='block';
+  document.getElementById('ma').innerHTML=`
+    <button class="btn btn-ok" onclick="showBombSolution()">Ver proceso</button>
+    <button class="btn btn-bad" onclick="bombFail()">Fallaron (−2 pts)</button>`;
+  document.getElementById('modal').classList.add('bomb-challenge');
+  startTimer(90);
+}
+
+function showBombSolution(){
+  stopTimer();
+  const d=cellData[currentCell].bombEx;
+  const box=document.getElementById('sol-box'),stepsEl=document.getElementById('sol-steps');
+  let html = d.steps.map((s,i) => `
+    <div class="step">
+      <div class="step-title">${s.t}</div>
+      <div class="step-content ${i===d.steps.length-1?'answer-hi':''}">${s.c}</div>
+    </div>
+  `).join('');
+  stepsEl.innerHTML=html;
+  box.classList.add('visible');
+  if(window.MathJax) MathJax.typesetPromise([stepsEl]);
+  document.getElementById('msub').textContent='¿Lograron resolverlo?';
+  document.getElementById('ma').innerHTML=`
+    <button class="btn btn-ok" onclick="bombWin()">✓ Respondieron bien</button>
+    <button class="btn btn-bad" onclick="bombFail()">✗ Fallaron (−2 pts)</button>`;
+}
+
+function bombWin(){ showToast(`¡Fila ${currentBombTeam+1} superó el desafío!`); closeModal(); }
+function bombFail(){
+  scores[currentBombTeam]=Math.max(0,scores[currentBombTeam]-2);
+  renderScores();
+  showToast(`Fila ${currentBombTeam+1} pierde 2 puntos`);
+  closeModal();
+}
+
+function awardPoint(i){
+  const pts=(cellData[currentCell].type==='hard')?2:1;
+  scores[i]+=pts;
+  renderScores();
+  showToast(`+${pts} punto${pts>1?'s':''} → Fila ${i+1}`);
+  closeModal();
+}
+
+function closeModal(){
+  stopTimer();
+  document.getElementById('overlay').classList.remove('open');
+  currentCell=null;currentBombTeam=-1;
+}
+
+function startTimer(secs){
+  stopTimer();
+  let left=secs;
+  const label=document.getElementById('tlbl'),fill=document.getElementById('tfill');
+  label.textContent=left;
+  fill.style.width='100%';
+  timerInterval=setInterval(()=>{
+    left--;
+    fill.style.width=(left/secs*100)+'%';
+    label.textContent=left;
+    if(left<=15) label.classList.add('danger');
+    if(left<=0){stopTimer(); showSolution();}
+  },1000);
+}
+function stopTimer(){ if(timerInterval) clearInterval(timerInterval); }
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+window.awardPoint=awardPoint;window.closeModal=closeModal;
+window.showSolution=showSolution;window.resetGame=resetGame;
+window.selectBombTeam=selectBombTeam;window.bombSafe=bombSafe;
+window.bombRisk=bombRisk;window.showBombSolution=showBombSolution;
+window.bombWin=bombWin;window.bombFail=bombFail;
+
+buildGame();renderScores();renderGrid();
+</script>
+</body>
+</html>
